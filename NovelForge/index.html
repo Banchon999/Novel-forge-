@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1a1612">
+<title>NovelForge — AI Translation Workbench</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Thai:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css?v=1.4.6">
+<link rel="stylesheet" href="css/layout.css?v=1.4.6">
+<link rel="stylesheet" href="css/components.css?v=1.4.6">
+<link rel="stylesheet" href="css/tabs.css?v=1.4.6">
+<link rel="stylesheet" href="css/modals.css?v=1.4.6">
+</head>
+<body>
+
+<!-- ══════════════  APP SHELL  ══════════════ -->
+<div id="app">
+
+  <!-- ─── TOP BAR ─── -->
+  <header class="topbar">
+    <button class="icon-btn" id="btnSidebar" aria-label="Workspaces">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <div class="brand">
+      <span class="brand-mark">⚒</span>
+      <span class="brand-text">NovelForge</span>
+      <span class="brand-version" id="appVersion" title="click ดู build info">v1.4.6</span>
+    </div>
+    <div class="ws-title-wrap" id="wsTitleWrap">
+      <span class="ws-title" id="wsTitle">— ไม่มี Workspace —</span>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="cost-badge" id="costBadge" title="ค่าใช้จ่ายสะสม">
+      <span class="cost-dot"></span>
+      <span id="costAmount">$0.00</span>
+    </div>
+    <button class="icon-btn" id="btnSettings" aria-label="Settings">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6m11-11h-6M7 12H1m17.7-6.7l-4.3 4.3M7.6 16.4l-4.3 4.3m0-17l4.3 4.3m9.4 9.4l4.3 4.3"/></svg>
+    </button>
+  </header>
+
+  <!-- ─── SIDEBAR: WORKSPACES ─── -->
+  <aside class="sidebar" id="sidebar" aria-hidden="true">
+    <div class="sidebar-head">
+      <h2>Workspaces</h2>
+      <button class="icon-btn close-btn" id="btnCloseSidebar" aria-label="ปิด">✕</button>
+    </div>
+    <div class="sidebar-actions">
+      <button class="btn btn-primary" id="btnNewWs">＋ สร้างใหม่</button>
+      <button class="btn btn-ghost" id="btnImportWs">⇪ นำเข้า</button>
+      <input type="file" id="importWsFile" accept=".json,.zip" hidden>
+    </div>
+    <div class="ws-list" id="wsList"></div>
+    <div class="sidebar-foot">
+      <button class="btn-subtle" id="btnExportAllWs">⇓ Export ทั้งหมด (backup)</button>
+    </div>
+  </aside>
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+  <!-- ─── TAB BAR ─── -->
+  <nav class="tabbar" id="tabbar">
+    <button class="tab-btn active" data-tab="chapters">
+      <span class="tab-icon">☰</span>
+      <span class="tab-label">ตอน</span>
+      <span class="tab-count" id="tabCountChapters">0</span>
+    </button>
+    <button class="tab-btn" data-tab="translate">
+      <span class="tab-icon">✎</span>
+      <span class="tab-label">แปล</span>
+    </button>
+    <button class="tab-btn" data-tab="auto">
+      <span class="tab-icon">⚡</span>
+      <span class="tab-label">Auto</span>
+    </button>
+    <button class="tab-btn" data-tab="glossary">
+      <span class="tab-icon">❋</span>
+      <span class="tab-label">Glossary</span>
+      <span class="tab-count" id="tabCountGlossary">0</span>
+    </button>
+    <button class="tab-btn" data-tab="read">
+      <span class="tab-icon">📖</span>
+      <span class="tab-label">อ่าน</span>
+    </button>
+    <button class="tab-btn" data-tab="settings">
+      <span class="tab-icon">⚙</span>
+      <span class="tab-label">Option</span>
+    </button>
+  </nav>
+
+  <!-- ─── MAIN STAGE ─── -->
+  <main class="stage" id="stage">
+
+    <!-- ▓▓▓ TAB: CHAPTERS ▓▓▓ -->
+    <section class="tab-panel active" data-panel="chapters">
+      <div class="panel-head">
+        <div class="panel-head-left">
+          <h2 class="panel-title">ตอนทั้งหมด</h2>
+          <span class="pill" id="chapterStats">— / —</span>
+        </div>
+        <div class="panel-head-right">
+          <button class="btn btn-ghost" id="btnSelectMode" title="เลือกหลายรายการ">☑ เลือก</button>
+          <button class="btn btn-primary" id="btnAddChapter">＋ ตอนใหม่</button>
+          <div class="menu-wrap">
+            <button class="btn btn-ghost" id="btnChMore">⋯</button>
+            <div class="menu" id="menuChMore" hidden>
+              <button data-act="import-epub">📘 นำเข้า EPUB</button>
+              <button data-act="import-txt">📄 นำเข้า TXT/ZIP</button>
+              <button data-act="import-paste">✎ วางเนื้อหาเอง</button>
+              <div class="menu-sep"></div>
+              <button data-act="export-sel">⇓ Export</button>
+              <button data-act="renumber">⇅ จัดลำดับใหม่</button>
+              <button data-act="bulk-rename">🏷 Rename หลายตอน</button>
+              <button data-act="recover-images">🖼 กอบกู้ลิงก์ภาพที่หาย</button>
+              <div class="menu-sep"></div>
+              <button data-act="clean-source">🧹 ล้าง Base64/URL ทุกตอน</button>
+              <button data-act="line-breaks-all">📐 เพิ่ม Line Break ทุกตอน</button>
+              <button data-act="consistency-ws">🔗 Consistency Check WS</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- bulk action bar (hidden by default) -->
+      <div class="bulk-bar" id="bulkBar" hidden>
+        <label class="chk-wrap">
+          <input type="checkbox" id="bulkSelectAll">
+          <span>เลือกทั้งหมด</span>
+        </label>
+        <span class="bulk-count"><strong id="bulkCount">0</strong> ตอนที่เลือก</span>
+        <div class="bulk-actions">
+          <button class="btn-chip" data-bulk="pending">เลือกเฉพาะที่ยังไม่แปล</button>
+          <button class="btn-chip" data-bulk="translated">เลือกเฉพาะที่แปลแล้ว</button>
+          <button class="btn-chip" data-bulk="translate">⚡ แปล</button>
+          <button class="btn-chip" data-bulk="credit">✒ ใส่ Credit</button>
+          <button class="btn-chip" data-bulk="strip-credit">🧹 ถอด Credit</button>
+          <button class="btn-chip" data-bulk="export">⇓ Export</button>
+          <button class="btn-chip danger" data-bulk="delete">🗑 ลบ</button>
+          <button class="btn-chip ghost" id="btnExitBulk">ออก</button>
+        </div>
+      </div>
+
+      <div class="chapter-filter-bar">
+        <input class="input search-input" id="chapterSearch" placeholder="ค้นหาตอน...">
+        <select class="select" id="chapterFilterStatus">
+          <option value="all">ทั้งหมด</option>
+          <option value="pending">ยังไม่แปล</option>
+          <option value="translating">กำลังแปล</option>
+          <option value="translated">แปลแล้ว</option>
+          <option value="edited">แก้ไขแล้ว</option>
+        </select>
+        <select class="select" id="chapterSort">
+          <option value="num-asc">ลำดับ ↑</option>
+          <option value="num-desc">ลำดับ ↓</option>
+          <option value="updated-desc">อัพเดตล่าสุด</option>
+        </select>
+      </div>
+
+      <div class="chapter-list" id="chapterList"></div>
+      <div class="empty-state" id="chapterEmpty" hidden>
+        <div class="empty-icon">📖</div>
+        <p>ยังไม่มีตอน</p>
+        <p class="dim">กดปุ่ม "＋ ตอนใหม่" หรือนำเข้าจาก EPUB</p>
+      </div>
+    </section>
+
+    <!-- ▓▓▓ TAB: TRANSLATE (manual) ▓▓▓ -->
+    <section class="tab-panel" data-panel="translate">
+      <div class="panel-head">
+        <div class="panel-head-left">
+          <h2 class="panel-title">แปลทีละตอน</h2>
+          <select class="select" id="translateChapterSelect" style="max-width:260px">
+            <option value="">— เลือกตอน —</option>
+          </select>
+        </div>
+        <div class="panel-head-right">
+          <button class="btn btn-ghost" id="btnNovelInstruction">📜 Novel Instructions</button>
+          <button class="btn btn-ghost" id="btnFindReplace">🔍 ค้นหา/แทนที่</button>
+          <button class="btn btn-ghost" id="btnReviewSearch" title="ค้นหาทีละรายการ">📋 Review</button>
+          <button class="btn btn-ghost" id="btnHonorifixCheck" title="ตรวจ ครับ/ค่ะ">🗣 หางเสียง</button>
+          <button class="btn btn-ghost" id="btnConsistencyCheck" title="ตรวจความสอดคล้อง">🔗 Consistency</button>
+          <button class="btn btn-primary" id="btnStartTranslate">▶ เริ่มแปล</button>
+          <button class="btn btn-danger" id="btnStopTranslate" hidden>■ หยุด</button>
+        </div>
+      </div>
+
+      <div class="translate-grid">
+        <div class="tg-col">
+          <div class="tg-col-head">
+            <span class="tg-col-title">Raw Text</span>
+            <span class="stat" id="rawStat">0 ตัวอักษร</span>
+            <div class="tg-col-actions">
+              <button class="btn-chip" id="btnLoadChapter">📂 โหลด</button>
+              <button class="btn-chip" id="btnClearRaw">✕ ล้าง</button>
+            </div>
+          </div>
+          <textarea class="tg-text mono" id="sourceText" placeholder="วาง Raw Text ภาษาต้นฉบับที่นี่..."></textarea>
+        </div>
+
+        <div class="tg-divider" aria-hidden="true"></div>
+
+        <div class="tg-col">
+          <div class="tg-col-head">
+            <span class="tg-col-title">คำแปลภาษาไทย</span>
+            <span class="stat" id="outStat">0 ตัวอักษร</span>
+            <div class="tg-col-actions">
+              <button class="btn-chip" id="btnEditOutput">✎ แก้ไข</button>
+              <button class="btn-chip" id="btnCopyOut">⧉ คัดลอก</button>
+              <button class="btn-chip primary" id="btnSaveToCh">⇩ บันทึกลงตอน</button>
+            </div>
+          </div>
+          <div class="tg-text serif" id="translationOutput" contenteditable="false"></div>
+        </div>
+      </div>
+
+      <div class="translate-progress" id="translateProgress" hidden>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+        <div class="progress-label" id="progressLabel">กำลังเตรียม...</div>
+      </div>
+    </section>
+
+    <!-- ▓▓▓ TAB: AUTO TRANSLATE PIPELINE ▓▓▓ -->
+    <section class="tab-panel" data-panel="auto">
+      <div class="panel-head">
+        <h2 class="panel-title">Auto Translate Pipeline</h2>
+        <div class="panel-head-right">
+          <button class="btn btn-ghost" id="btnMarathonConfig">⚙ ตั้งค่า Marathon</button>
+        </div>
+      </div>
+
+      <!-- Stepper -->
+      <div class="stepper" id="stepper">
+        <div class="step" data-step="select">
+          <span class="step-num">1</span>
+          <span class="step-label">เลือกตอน</span>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step" data-step="glossary">
+          <span class="step-num">2</span>
+          <span class="step-label">สร้าง Glossary</span>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step" data-step="qa">
+          <span class="step-num">3</span>
+          <span class="step-label">QA Glossary</span>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step" data-step="translate">
+          <span class="step-num">4</span>
+          <span class="step-label">แปล</span>
+        </div>
+        <div class="step-connector"></div>
+        <div class="step" data-step="done">
+          <span class="step-num">5</span>
+          <span class="step-label">เสร็จ</span>
+        </div>
+      </div>
+
+      <!-- Step 1: select -->
+      <div class="step-body" data-body="select">
+        <div class="select-toolbar">
+          <button class="btn-chip" id="autoSelAll">เลือกทั้งหมด</button>
+          <button class="btn-chip" id="autoSelNone">ล้าง</button>
+          <button class="btn-chip" id="autoSelPending">ที่ยังไม่แปล</button>
+          <span class="spacer"></span>
+          <span class="pill" id="autoSelCount">0 ตอน</span>
+        </div>
+        <div class="auto-ch-list" id="autoChapterList"></div>
+        <div class="step-foot">
+          <label class="chk-wrap">
+            <input type="checkbox" id="autoSkipGlossary">
+            <span>ข้ามสร้าง Glossary ใหม่ (ใช้ของเดิม)</span>
+          </label>
+          <label class="chk-wrap">
+            <input type="checkbox" id="autoAgentMode" checked>
+            <span>🤖 <b>Agent Mode</b> — AI คุม Glossary เอง (ไม่ต้องยืนยัน)</span>
+          </label>
+          <label class="chk-wrap">
+            <input type="checkbox" id="autoDriftFix" checked>
+            <span>🔍 ตรวจ &amp; แก้ Glossary Drift หลังแปลเสร็จ</span>
+          </label>
+          <button class="btn btn-primary" id="btnAutoStart">เริ่ม Pipeline ▶</button>
+        </div>
+      </div>
+
+      <!-- Step 2/3: glossary + QA (inline) -->
+      <div class="step-body" data-body="glossary" hidden>
+        <div class="auto-status" id="glossaryStatus">กำลังสกัด Glossary...</div>
+        <div class="auto-log" id="glossaryLog"></div>
+      </div>
+
+      <div class="step-body" data-body="qa" hidden>
+        <div class="auto-status" id="qaStatus">กำลังตรวจ Glossary...</div>
+        <div class="auto-log" id="qaLog"></div>
+      </div>
+
+      <!-- Step 4: translate progress -->
+      <div class="step-body" data-body="translate" hidden>
+        <div class="marathon-grid">
+          <div class="m-stat">
+            <div class="m-stat-label">ตอนในคิว</div>
+            <div class="m-stat-val" id="mQueueCount">0</div>
+          </div>
+          <div class="m-stat">
+            <div class="m-stat-label">เสร็จ</div>
+            <div class="m-stat-val ok" id="mDoneCount">0</div>
+          </div>
+          <div class="m-stat">
+            <div class="m-stat-label">ล้มเหลว</div>
+            <div class="m-stat-val err" id="mFailCount">0</div>
+          </div>
+          <div class="m-stat">
+            <div class="m-stat-label">Workers</div>
+            <div class="m-stat-val" id="mWorkerCount">0</div>
+          </div>
+        </div>
+        <div class="progress-bar big"><div class="progress-fill" id="mProgressFill"></div></div>
+        <div class="progress-label" id="mProgressLabel">—</div>
+
+        <div class="worker-slots" id="workerSlots"></div>
+
+        <div class="control-bar">
+          <button class="btn btn-ghost" id="btnMarathonPause">⏸ พัก</button>
+          <button class="btn btn-danger" id="btnMarathonStop">■ หยุด</button>
+        </div>
+
+        <h4 class="section-head">Log</h4>
+        <div class="marathon-log" id="marathonLog"></div>
+      </div>
+
+      <div class="step-body" data-body="done" hidden>
+        <div class="done-card">
+          <div class="done-icon">✓</div>
+          <h3 id="doneTitle">แปลเสร็จสิ้น</h3>
+          <p id="doneSummary" class="dim">—</p>
+          <div class="done-actions">
+            <button class="btn btn-ghost" id="btnDoneBack">← กลับหน้าตอน</button>
+            <button class="btn btn-primary" id="btnDoneExport">⇓ Export</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ▓▓▓ TAB: GLOSSARY ▓▓▓ -->
+    <section class="tab-panel" data-panel="glossary">
+      <div class="panel-head">
+        <div class="panel-head-left">
+          <h2 class="panel-title">Glossary</h2>
+          <span class="pill" id="glossaryStats">0 คำ</span>
+        </div>
+        <div class="panel-head-right">
+          <button class="btn btn-ghost" id="btnGlossarySelect">☑ เลือก</button>
+          <button class="btn btn-ghost" id="btnGlossaryCSVImport">📥 CSV</button>
+          <button class="btn btn-ghost" id="btnGlossaryCSVExport">📤 CSV</button>
+          <button class="btn btn-primary" id="btnAddGlossary">＋ เพิ่มคำ</button>
+          <div class="menu-wrap">
+            <button class="btn btn-ghost" id="btnGlMore">⋯</button>
+            <div class="menu" id="menuGlMore" hidden>
+              <button data-act="dedupe2">🔍 เช็คคำซ้ำ (2-stage)</button>
+              <button data-act="autogloss">🧭 Auto Glossary Harmonize</button>
+              <button data-act="dedupe">🔎 หาคำซ้อนกัน (substring)</button>
+              <button data-act="inherit">⥉ รับคำจาก WS อื่น</button>
+              <button data-act="autoqa">🤖 AI ตรวจ Glossary</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="glossary-filter-bar">
+        <input class="input search-input" id="glossarySearch" placeholder="ค้นหาคำ...">
+        <select class="select" id="glossaryTypeFilter">
+          <option value="">ทุกประเภท</option>
+          <option value="character">ตัวละคร</option>
+          <option value="place">สถานที่</option>
+          <option value="term">ศัพท์เฉพาะ</option>
+          <option value="skill">พลัง/สกิล</option>
+          <option value="title">ตำแหน่ง</option>
+          <option value="rank">อันดับ</option>
+          <option value="honorific">คำเรียก</option>
+          <option value="other">อื่นๆ</option>
+        </select>
+        <select class="select" id="glossarySort">
+          <option value="default">ล่าสุด</option>
+          <option value="az">A → Z</option>
+          <option value="type">ประเภท</option>
+        </select>
+      </div>
+
+      <!-- bulk bar -->
+      <div class="bulk-bar" id="glBulkBar" hidden>
+        <label class="chk-wrap">
+          <input type="checkbox" id="glBulkSelectAll">
+          <span>เลือกทั้งหมด</span>
+        </label>
+        <span class="bulk-count"><strong id="glBulkCount">0</strong> คำที่เลือก</span>
+        <div class="bulk-actions">
+          <button class="btn-chip danger" id="btnGlBulkDelete">🗑 ลบ</button>
+          <button class="btn-chip ghost" id="btnGlBulkExit">ออก</button>
+        </div>
+      </div>
+
+      <div class="glossary-list" id="glossaryList"></div>
+      <div class="empty-state" id="glossaryEmpty" hidden>
+        <div class="empty-icon">❋</div>
+        <p>ยังไม่มีคำใน Glossary</p>
+        <p class="dim">ใช้ Auto Pipeline หรือเพิ่มเอง</p>
+      </div>
+    </section>
+
+    <!-- ▓▓▓ TAB: READ ▓▓▓ -->
+    <section class="tab-panel" data-panel="read">
+      <div class="panel-head">
+        <div class="panel-head-left">
+          <h2 class="panel-title">โหมดอ่าน</h2>
+          <select class="select" id="readChapterSelect" style="max-width:260px">
+            <option value="">— เลือกตอน —</option>
+          </select>
+        </div>
+        <div class="panel-head-right">
+          <div class="read-controls">
+            <button class="btn-chip" id="btnReadFontDn">A−</button>
+            <button class="btn-chip" id="btnReadFontUp">A＋</button>
+            <select class="select" id="readMode">
+              <option value="translation">แปลแล้ว</option>
+              <option value="source">ต้นฉบับ</option>
+              <option value="both">คู่ขนาน</option>
+            </select>
+          </div>
+          <button class="btn-chip" id="btnReadPrev">← ก่อนหน้า</button>
+          <button class="btn-chip" id="btnReadNext">ต่อไป →</button>
+        </div>
+      </div>
+
+      <article class="reader" id="reader">
+        <div class="reader-empty" id="readerEmpty">
+          <p class="dim">เลือกตอนเพื่อเริ่มอ่าน</p>
+        </div>
+        <div class="reader-body" id="readerBody" hidden>
+          <h1 class="reader-title" id="readerTitle"></h1>
+          <div class="reader-meta" id="readerMeta"></div>
+          <div class="reader-content" id="readerContent"></div>
+        </div>
+      </article>
+    </section>
+
+    <!-- ▓▓▓ TAB: OPTIONS ▓▓▓ -->
+    <section class="tab-panel" data-panel="settings">
+      <div class="panel-head">
+        <h2 class="panel-title">ตั้งค่า</h2>
+      </div>
+
+      <div class="settings-grid">
+
+        <!-- API -->
+        <div class="settings-card">
+          <h3>🔑 OpenRouter API</h3>
+          <label class="field">
+            <span>API Key</span>
+            <div class="input-row">
+              <input class="input" type="password" id="apiKeyInput" placeholder="sk-or-v1-...">
+              <button class="btn-chip" id="btnTogglePw">👁</button>
+              <button class="btn-chip" id="btnTestKey">✓ Test</button>
+              <button class="btn-chip primary" id="btnSaveKey">บันทึก</button>
+            </div>
+            <small class="hint">เก็บใน localStorage เท่านั้น — ไม่ได้ส่งไปเซิร์ฟเวอร์อื่น</small>
+          </label>
+          <label class="field">
+            <span>Model สำหรับแปล</span>
+            <div id="modelTranslateWrap" class="model-picker"></div>
+            <input class="input" id="modelTranslate" placeholder="google/gemini-2.5-flash" hidden>
+          </label>
+          <label class="field">
+            <span>Model สำหรับ Glossary / QA</span>
+            <div id="modelGlossaryWrap" class="model-picker"></div>
+            <input class="input" id="modelGlossary" placeholder="google/gemini-2.5-flash" hidden>
+          </label>
+          <label class="field">
+            <span>Model สำหรับสรุปตอน (Context)</span>
+            <div id="modelSummaryWrap" class="model-picker"></div>
+            <input class="input" id="modelSummary" placeholder="google/gemini-2.5-flash" hidden>
+          </label>
+        </div>
+
+        <!-- Translation engine -->
+        <div class="settings-card">
+          <h3>✎ การแปล</h3>
+          <label class="field">
+            <span>Temperature <span class="dim" id="tempVal">0.7</span></span>
+            <input type="range" id="tempRange" min="0" max="1.5" step="0.05" value="0.7">
+          </label>
+          <label class="field">
+            <span>ขนาด Chunk (ตัวอักษร)</span>
+            <input class="input" type="number" id="chunkSize" value="2500" min="500" max="8000" step="100">
+            <small class="hint">เล็ก = แม่นยำ, ใหญ่ = เร็ว | แนะนำ 2000-3000</small>
+          </label>
+          <label class="field">
+            <span>โหมดแบ่ง Chunk</span>
+            <select class="select" id="chunkMode">
+              <option value="scene">Scene Break (★/---)</option>
+              <option value="size" selected>ตามขนาด (Smart)</option>
+              <option value="paragraph">ตาม Paragraph</option>
+              <option value="whole">ไม่แบ่ง (ทั้งตอน)</option>
+            </select>
+          </label>
+          <label class="chk-wrap">
+            <input type="checkbox" id="useStream" checked>
+            <span>Streaming (เห็นผลทันที)</span>
+          </label>
+          <label class="chk-wrap">
+            <input type="checkbox" id="useContext" checked>
+            <span>ใช้ Context Memory (สรุปตอนก่อนหน้า)</span>
+          </label>
+          <label class="chk-wrap">
+            <input type="checkbox" id="useAutoGlossary" checked>
+            <span>สกัด Glossary อัตโนมัติหลังแปล</span>
+          </label>
+          <label class="chk-wrap">
+            <input type="checkbox" id="translateTitles" checked>
+            <span>📚 แปลชื่อตอนอัตโนมัติ (ทับ title เดิม + prepend เข้า body)</span>
+          </label>
+          <label class="chk-wrap">
+            <input type="checkbox" id="nonThaiDetect" checked>
+            <span>🔍 Non-Thai Detector — ตรวจ chunk ที่แปลไม่เป็นไทย แล้วแปลใหม่อัตโนมัติ</span>
+          </label>
+        </div>
+
+        <!-- Register / pronouns -->
+        <div class="settings-card">
+          <h3>🎭 Register / คำแทนตัว</h3>
+          <label class="field">
+            <span>โหมดคำแทนตัว (default)</span>
+            <select class="select" id="registerDefault">
+              <option value="neutral">กลาง (ฉัน/เขา/เธอ)</option>
+              <option value="modern">สมัยใหม่ (ผม/ฉัน + ครับ/ค่ะ)</option>
+              <option value="archaic">โบราณ/จีนกำลังภายใน (ข้า/เจ้า/ท่าน)</option>
+              <option value="rough">หยาบ/นักเลง (กู/มึง)</option>
+              <option value="none">ไร้หางเสียง (ละไว้)</option>
+              <option value="literal">ตรงตัว (Literal)</option>
+              <option value="fluid">🌊 Fluid / Emotion-first (อารมณ์นำ ไร้เพศ)</option>
+              <option value="auto">Auto (AI ตัดสินจากโทนเรื่อง)</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Narrator Pronoun (first-person)</span>
+            <select class="select" id="narratorPronoun">
+              <option value="auto">Auto (ตามโทน)</option>
+              <option value="chan">ฉัน</option>
+              <option value="kha">ข้า</option>
+              <option value="phom">ผม</option>
+              <option value="nu">หนู</option>
+              <option value="ku">กู</option>
+              <option value="ra">เรา / Zero (ไม่ระบุเพศ)</option>
+            </select>
+          </label>
+          <p class="hint">⚠️ ระบบนี้จะส่งกติกาเป็น <em>prompt rule</em> ไม่ได้ทำ regex replace (ซึ่งเคยพังคำว่า "เข้า", "ข้าง")</p>
+          <p class="hint" id="fluidModeHint" style="display:none">🌊 <strong>Fluid mode:</strong> แนะนำให้ตั้ง Narrator Pronoun เป็น <em>เรา / Zero</em> เพื่อให้สอดคล้องกัน</p>
+        </div>
+
+        <!-- Workspace info -->
+        <div class="settings-card">
+          <h3>📒 ข้อมูลเรื่อง</h3>
+          <label class="field">
+            <span>ชื่อเรื่อง</span>
+            <input class="input" id="wsTitleInput" placeholder="ชื่อนิยาย">
+          </label>
+          <label class="field">
+            <span>ผู้แต่ง</span>
+            <input class="input" id="wsAuthorInput" placeholder="ชื่อผู้แต่ง">
+          </label>
+          <label class="field">
+            <span>แนว (Tag)</span>
+            <input class="input" id="wsTagsInput" placeholder="แฟนตาซี, กำลังภายใน, ฯลฯ">
+          </label>
+          <label class="field">
+            <span>เรื่องย่อ</span>
+            <textarea class="input textarea" id="wsSynopsisInput" rows="4"></textarea>
+          </label>
+          <label class="field">
+            <span>Novel Instructions (prompt เพิ่มเติม)</span>
+            <textarea class="input textarea" id="wsInstructionInput" rows="5" placeholder="เช่น: โทนมืด, ภาษาโบราณ, หลีกเลี่ยงคำสมัยใหม่..."></textarea>
+          </label>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="btnSaveWsInfo">บันทึก</button>
+            <button class="btn btn-danger" id="btnDeleteWs">🗑 ลบ Workspace นี้</button>
+          </div>
+        </div>
+
+        <!-- Marathon -->
+        <div class="settings-card">
+          <h3>🏃 Marathon</h3>
+          <label class="field">
+            <span>Concurrency (worker พร้อมกัน)</span>
+            <input class="input" type="number" id="mConcurrency" value="3" min="1" max="10">
+            <small class="hint">แนะนำ 3-5 | มากเกินเสี่ยง rate limit</small>
+          </label>
+          <label class="field">
+            <span>Daily Limit (ตอน/วัน, 0 = ไม่จำกัด)</span>
+            <input class="input" type="number" id="mDailyLimit" value="0" min="0">
+          </label>
+          <label class="chk-wrap">
+            <input type="checkbox" id="mRetry" checked>
+            <span>Retry เมื่อผิดพลาด (max 2 ครั้ง)</span>
+          </label>
+          <label class="chk-wrap">
+            <input type="checkbox" id="mAutoSummary" checked>
+            <span>สรุปตอน (context) หลังแปลแต่ละตอน</span>
+          </label>
+          <label class="chk-wrap">
+            <input type="checkbox" id="mWarmupFirst" checked>
+            <span>🔥 Warm-up: แปลตอนแรกเดี่ยวก่อน (โทนนิ่งกว่า)</span>
+          </label>
+          <label class="chk-wrap">
+            <input type="checkbox" id="mSortByNum" checked>
+            <span>↕ เรียงตามลำดับตอนก่อนแปล</span>
+          </label>
+          <small class="hint">
+            ⚠️ ถ้าโทนแปลไม่นิ่ง (ครับ/ค่ะ สลับ, ชาย/หญิง สับสน) ลองลด Concurrency เป็น 1 หรือเปิด Warm-up
+          </small>
+        </div>
+
+        <!-- Appearance -->
+        <div class="settings-card">
+          <h3>🎨 หน้าตา</h3>
+          <label class="field">
+            <span>ธีม</span>
+            <select class="select" id="themeSelect">
+              <option value="ink">Scholar's Ink (เข้ม)</option>
+              <option value="parchment">Parchment (อ่อน)</option>
+              <option value="nocturne">Nocturne (ดำสนิท)</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>ขนาดตัวอักษร</span>
+            <select class="select" id="fontSize">
+              <option value="sm">เล็ก</option>
+              <option value="md" selected>กลาง</option>
+              <option value="lg">ใหญ่</option>
+            </select>
+          </label>
+        </div>
+
+        <!-- ─── Translator Credit (Global) ─── -->
+        <div class="settings-card">
+          <h3>✒ Credit นักแปล <span class="dim" style="font-size:11px;font-weight:400">(Global · ใช้ทั้งแอป)</span></h3>
+          <label class="chk-wrap" style="margin-bottom:12px">
+            <input type="checkbox" id="creditEnabled">
+            <span><b>เปิดใช้ระบบ Credit</b></span>
+          </label>
+          <label class="field">
+            <span>ชื่อนักแปล / นามปากกา</span>
+            <input class="input" id="creditName" placeholder="เช่น: ลมโชย, NyxTrans">
+          </label>
+          <label class="field">
+            <span>ช่องทางติดต่อ (ไม่บังคับ)</span>
+            <input class="input" id="creditContact" placeholder="IG, FB, เว็บ, ฯลฯ">
+          </label>
+          <label class="field">
+            <span>ข้อความเสริม (ไม่บังคับ)</span>
+            <input class="input" id="creditMessage" placeholder="เช่น: ถ้าชอบ ฝากกดติดตาม">
+          </label>
+          <label class="field">
+            <span>ตำแหน่ง</span>
+            <select class="select" id="creditPlacement">
+              <option value="footer">ท้ายตอน</option>
+              <option value="header">ต้นตอน</option>
+              <option value="both">ทั้งต้นและท้าย</option>
+            </select>
+          </label>
+          <label class="chk-wrap">
+            <input type="checkbox" id="creditRandomStyle" checked>
+            <span>สุ่ม pattern ทุกครั้ง (กัน Find &amp; Replace)</span>
+          </label>
+          <label class="chk-wrap">
+            <input type="checkbox" id="creditIncludeChInfo" checked>
+            <span>ใส่ชื่อตอน + ชื่อเรื่อง</span>
+          </label>
+          <label class="chk-wrap">
+            <input type="checkbox" id="creditAutoApply">
+            <span>ใส่อัตโนมัติเมื่อแปลเสร็จ (เดี่ยว + Marathon)</span>
+          </label>
+          <small class="hint">
+            • Credit จะอยู่ในบล็อกแยก ไม่ปนกับเนื้อหาแปล<br>
+            • ฝัง zero-width signature เพื่อตรวจสอบลายมือ (ผู้รู้สามารถลบได้)<br>
+            • กดปุ่มด้านล่างเพื่อใส่/ถอด credit จากตอนใน workspace ปัจจุบันได้
+          </small>
+          <div class="btn-row" style="margin-top:12px">
+            <button class="btn btn-ghost" id="btnCreditPreview">👁 ดูตัวอย่าง</button>
+            <button class="btn btn-ghost" id="btnCreditApplyAll">✒ ใส่กับ WS นี้</button>
+            <button class="btn btn-danger" id="btnCreditStripAll">🧹 ถอดจาก WS นี้</button>
+          </div>
+        </div>
+
+        <!-- Backup / Danger -->
+        <div class="settings-card">
+          <h3>💾 Backup &amp; Danger</h3>
+          <div class="btn-row">
+            <button class="btn btn-ghost" id="btnExportWsJSON">⇓ Export Workspace JSON</button>
+            <button class="btn btn-ghost" id="btnExportAllWsJSON">⇓ Export ทุก Workspace</button>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-danger" id="btnResetCost">Reset ค่าใช้จ่ายสะสม</button>
+            <button class="btn btn-danger" id="btnWipeAll">⚠ ลบข้อมูลทั้งหมด</button>
+          </div>
+          <small class="hint" id="backupReminder"></small>
+        </div>
+
+        <!-- ▓▓▓ Dev Log ▓▓▓ -->
+        <div class="settings-card" id="devLogCard">
+          <h3>
+            🔧 Dev Log
+            <button class="btn-chip" id="btnDevLogToggle" style="float:right">แสดง</button>
+          </h3>
+          <small class="hint">บันทึกเหตุการณ์ภายใน ใช้ส่ง bug report หรือดูว่าอะไรพังตรงไหน</small>
+
+          <div id="devLogBody" hidden style="margin-top:12px">
+            <div class="btn-row" style="flex-wrap:wrap">
+              <select class="select" id="devLogLevelFilter" style="max-width:140px">
+                <option value="">ทั้งหมด</option>
+                <option value="debug">Debug+</option>
+                <option value="info" selected>Info+</option>
+                <option value="warn">Warn+</option>
+                <option value="error">Error เท่านั้น</option>
+              </select>
+              <input class="input mono" id="devLogSearch" placeholder="ค้นหา tag/msg" style="flex:1;min-width:140px">
+              <label class="chk-wrap">
+                <input type="checkbox" id="devLogAutoScroll" checked>
+                <span>เลื่อนอัตโนมัติ</span>
+              </label>
+            </div>
+            <div class="btn-row">
+              <button class="btn btn-ghost" id="btnDevLogCopy">📋 Copy</button>
+              <button class="btn btn-ghost" id="btnDevLogDownload">⇓ Download .txt</button>
+              <button class="btn btn-danger" id="btnDevLogClear">Clear</button>
+              <span class="spacer"></span>
+              <span class="dim mono" id="devLogCount" style="font-size:11px">0 entries</span>
+            </div>
+            <div id="devLogBox" class="dev-log-box"></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ─── TOAST ─── -->
+  <div class="toast-stack" id="toastStack"></div>
+
+  <!-- ─── MODAL ROOT ─── -->
+  <div id="modalRoot"></div>
+
+  <!-- ─── EMPTY STATE (no workspace) ─── -->
+  <div class="no-ws-state" id="noWsState" hidden>
+    <div class="nws-inner">
+      <div class="nws-mark">⚒</div>
+      <h1>NovelForge</h1>
+      <p class="dim">โรงตีเหล็กของนักแปล<br>เลือก Workspace หรือสร้างใหม่เพื่อเริ่มต้น</p>
+      <div class="nws-actions">
+        <button class="btn btn-primary" id="btnNwsNew">＋ สร้าง Workspace ใหม่</button>
+        <button class="btn btn-ghost" id="btnNwsImport">⇪ นำเข้า</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════  SCRIPTS  ═══════════════ -->
+<!-- Core -->
+<script src="js/core/state.js?v=1.4.6"></script>
+<script src="js/core/log.js?v=1.4.6"></script>
+<script src="js/core/idb.js?v=1.4.6"></script>
+<script src="js/core/storage.js?v=1.4.6"></script>
+<script src="js/core/credit.js?v=1.4.6"></script>
+<script src="js/core/models.js?v=1.4.6"></script>
+<script src="js/core/api.js?v=1.4.6"></script>
+<script src="js/core/zip.js?v=1.4.6"></script>
+<script src="js/core/epub.js?v=1.4.6"></script>
+<script src="js/core/docx.js?v=1.4.6"></script>
+<script src="js/core/prompts.js?v=1.4.6"></script>
+<script src="js/core/image-guard.js?v=1.4.6"></script>
+<script src="js/core/translator.js?v=1.4.6"></script>
+<script src="js/core/glossary.js?v=1.4.6"></script>
+<script src="js/core/glossary-agent.js?v=1.4.6"></script>
+
+<!-- UI -->
+<script src="js/ui/util.js?v=1.4.6"></script>
+<script src="js/ui/modal.js?v=1.4.6"></script>
+<script src="js/ui/toast.js?v=1.4.6"></script>
+<script src="js/ui/sidebar.js?v=1.4.6"></script>
+<script src="js/ui/tabs.js?v=1.4.6"></script>
+
+<!-- Features -->
+<script src="js/features/workspace.js?v=1.4.6"></script>
+<script src="js/features/chapters.js?v=1.4.6"></script>
+<script src="js/features/translate-tab.js?v=1.4.6"></script>
+<script src="js/features/auto-tab.js?v=1.4.6"></script>
+<script src="js/features/glossary-tab.js?v=1.4.6"></script>
+<script src="js/features/read-tab.js?v=1.4.6"></script>
+<script src="js/features/settings-tab.js?v=1.4.6"></script>
+<script src="js/features/marathon.js?v=1.4.6"></script>
+<script src="js/features/import-export.js?v=1.4.6"></script>
+<script src="js/features/find-replace.js?v=1.4.6"></script>
+<script src="js/features/review-search.js?v=1.4.6"></script>
+<script src="js/features/consistency-check.js?v=1.4.6"></script>
+
+<!-- Bootstrap -->
+<script src="js/app.js?v=1.4.6"></script>
+
+</body>
+</html>
